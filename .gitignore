@@ -1,0 +1,30 @@
+# ---------- Python ----------
+__pycache__/
+*.py[cod]
+*.egg-info/
+*.spec
+
+# ---------- PyInstaller 产物 ----------
+build/
+dist/
+
+# ---------- 本地数据（隐私） ----------
+data/
+
+# ---------- 打包产物 ----------
+apk/*.apk
+
+# ---------- Android ----------
+android/.gradle/
+android/.idea/
+android/build/
+android/app/build/
+android/local.properties
+android/captures/
+*.iml
+*.apk
+
+# ---------- 系统 ----------
+.DS_Store
+Thumbs.db
+desktop.ini
