@@ -15,6 +15,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -203,11 +204,12 @@ private fun BarChart(points: List<com.salarybook.app.calc.MonthPoint>) {
     val incomeColor = Color(0xFF1976D2)
     val payableColor = Color(0xFF2E9E44)
     val actualColor = Color(0xFFFF9800)
-    Canvas(Modifier.fillMaxSize().padding(8.dp)) {
+    val d = LocalDensity.current.density
+    Canvas(Modifier.fillMaxSize().padding(4.dp)) {
         if (points.isEmpty()) return@Canvas
         val w = size.width
         val h = size.height
-        val padL = 80f; val padR = 10f; val padB = 36f; val padT = 20f
+        val padL = 30f * d; val padR = 6f * d; val padB = 18f * d; val padT = 10f * d
         val plotW = w - padL - padR
         val plotH = h - padT - padB
         val rawMax = maxOf(
@@ -218,19 +220,19 @@ private fun BarChart(points: List<com.salarybook.app.calc.MonthPoint>) {
         )
         val maxV = niceMax(rawMax)
         val axisColor = Color(0xFFCCCCCC)
-        drawLine(axisColor, Offset(padL, padT), Offset(padL, padT + plotH), strokeWidth = 2f)
-        drawLine(axisColor, Offset(padL, padT + plotH), Offset(padL + plotW, padT + plotH), strokeWidth = 2f)
-        val rightPaint = axisPaint(android.graphics.Paint.Align.RIGHT, 30f)
-        val centerPaint = axisPaint(android.graphics.Paint.Align.CENTER, 26f)
-        val leftPaint = axisPaint(android.graphics.Paint.Align.LEFT, 28f)
+        drawLine(axisColor, Offset(padL, padT), Offset(padL, padT + plotH), strokeWidth = 1.5f)
+        drawLine(axisColor, Offset(padL, padT + plotH), Offset(padL + plotW, padT + plotH), strokeWidth = 1.5f)
+        val rightPaint = axisPaint(android.graphics.Paint.Align.RIGHT, 13f * d)
+        val centerPaint = axisPaint(android.graphics.Paint.Align.CENTER, 11f * d)
+        val leftPaint = axisPaint(android.graphics.Paint.Align.LEFT, 12f * d)
         for (i in 0..4) {
             val y = padT + plotH - plotH * i / 4f
-            drawLine(axisColor, Offset(padL - 4f, y), Offset(padL, y), strokeWidth = 1f)
-            drawContext.canvas.nativeCanvas.drawText(shortAmount(maxV * i / 4f), padL - 12f, y + 9f, rightPaint)
+            drawLine(axisColor, Offset(padL - 3f * d, y), Offset(padL, y), strokeWidth = 1f)
+            drawContext.canvas.nativeCanvas.drawText(shortAmount(maxV * i / 4f), padL - 4f * d, y + 4f * d, rightPaint)
         }
         val n = points.size
         val slot = plotW / n
-        val barW = (slot * 0.13f).coerceAtMost(20f)
+        val barW = (slot * 0.13f).coerceAtMost(10f * d)
         points.forEachIndexed { i, p ->
             var x0 = padL + slot * i + slot * 0.30f
             val bars = listOf(
@@ -242,20 +244,23 @@ private fun BarChart(points: List<com.salarybook.app.calc.MonthPoint>) {
                 if (!show) continue
                 val hh = (v / maxV) * plotH
                 drawRect(color, Offset(x0, padT + plotH - hh), Size(barW, hh))
-                x0 += barW + 2f
+                x0 += barW + 1f * d
             }
-            drawContext.canvas.nativeCanvas.drawText(p.period.take(7).substring(2), padL + slot * i + slot / 2f, padT + plotH + 24f, centerPaint)
+            drawContext.canvas.nativeCanvas.drawText(p.period.take(7).substring(2), padL + slot * i + slot / 2f, padT + plotH + 12f * d, centerPaint)
         }
-        drawDiffMarkers(points, padL, slot, padT)
+        drawDiffMarkers(points, padL, slot, padT, d)
         var lx = padL
-        drawRect(incomeColor, Offset(lx, 4f), Size(14f, 14f))
-        drawContext.canvas.nativeCanvas.drawText("收入", lx + 18f, 16f, leftPaint); lx += 82f
-        drawRect(payableColor, Offset(lx, 4f), Size(14f, 14f))
-        drawContext.canvas.nativeCanvas.drawText("应发", lx + 18f, 16f, leftPaint); lx += 82f
-        drawRect(actualColor, Offset(lx, 4f), Size(14f, 14f))
-        drawContext.canvas.nativeCanvas.drawText("实发", lx + 18f, 16f, leftPaint); lx += 82f
-        drawCircle(Color(0xFFE53935), radius = 5f, center = Offset(lx + 7f, 11f))
-        drawContext.canvas.nativeCanvas.drawText("有差额", lx + 20f, 16f, leftPaint)
+        val sw = 6f * d
+        fun legendItem(color: Color, label: String) {
+            drawRect(color, Offset(lx, 3f * d), Size(sw, sw))
+            drawContext.canvas.nativeCanvas.drawText(label, lx + sw + 3f * d, 7f * d + sw, leftPaint)
+            lx += sw + 3f * d + label.length * 7f * d + 6f * d
+        }
+        legendItem(incomeColor, "收入")
+        legendItem(payableColor, "应发")
+        legendItem(actualColor, "实发")
+        drawCircle(Color(0xFFE53935), radius = 2.5f * d, center = Offset(lx + 3f * d, 6f * d))
+        drawContext.canvas.nativeCanvas.drawText("有差额", lx + 7f * d, 7f * d + sw, leftPaint)
     }
 }
 
@@ -264,11 +269,12 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawDiffMarkers(
     padL: Float,
     slot: Float,
     padT: Float,
+    d: Float,
 ) {
     points.forEachIndexed { i, p ->
         if (p.paid && kotlin.math.abs(p.diff) >= 0.005) {
             val cx = padL + slot * i + slot / 2f
-            drawCircle(Color(0xFFE53935), radius = 5f, center = Offset(cx, padT + 12f))
+            drawCircle(Color(0xFFE53935), radius = 2.5f * d, center = Offset(cx, padT + 5f * d))
         }
     }
 }
@@ -278,11 +284,12 @@ private fun LineChart(points: List<com.salarybook.app.calc.MonthPoint>) {
     val incomeColor = Color(0xFF1976D2)
     val payableColor = Color(0xFF2E9E44)
     val actualColor = Color(0xFFFF9800)
-    Canvas(Modifier.fillMaxSize().padding(8.dp)) {
+    val d = LocalDensity.current.density
+    Canvas(Modifier.fillMaxSize().padding(4.dp)) {
         if (points.isEmpty()) return@Canvas
         val w = size.width
         val h = size.height
-        val padL = 80f; val padR = 10f; val padB = 36f; val padT = 20f
+        val padL = 30f * d; val padR = 6f * d; val padB = 18f * d; val padT = 10f * d
         val plotW = w - padL - padR
         val plotH = h - padT - padB
         val rawMax = maxOf(
@@ -293,15 +300,15 @@ private fun LineChart(points: List<com.salarybook.app.calc.MonthPoint>) {
         )
         val maxV = niceMax(rawMax)
         val axisColor = Color(0xFFCCCCCC)
-        drawLine(axisColor, Offset(padL, padT), Offset(padL, padT + plotH), strokeWidth = 2f)
-        drawLine(axisColor, Offset(padL, padT + plotH), Offset(padL + plotW, padT + plotH), strokeWidth = 2f)
-        val rightPaint = axisPaint(android.graphics.Paint.Align.RIGHT, 30f)
-        val centerPaint = axisPaint(android.graphics.Paint.Align.CENTER, 26f)
-        val leftPaint = axisPaint(android.graphics.Paint.Align.LEFT, 28f)
+        drawLine(axisColor, Offset(padL, padT), Offset(padL, padT + plotH), strokeWidth = 1.5f)
+        drawLine(axisColor, Offset(padL, padT + plotH), Offset(padL + plotW, padT + plotH), strokeWidth = 1.5f)
+        val rightPaint = axisPaint(android.graphics.Paint.Align.RIGHT, 13f * d)
+        val centerPaint = axisPaint(android.graphics.Paint.Align.CENTER, 11f * d)
+        val leftPaint = axisPaint(android.graphics.Paint.Align.LEFT, 12f * d)
         for (i in 0..4) {
             val y = padT + plotH - plotH * i / 4f
-            drawLine(axisColor, Offset(padL - 4f, y), Offset(padL, y), strokeWidth = 1f)
-            drawContext.canvas.nativeCanvas.drawText(shortAmount(maxV * i / 4f), padL - 12f, y + 9f, rightPaint)
+            drawLine(axisColor, Offset(padL - 3f * d, y), Offset(padL, y), strokeWidth = 1f)
+            drawContext.canvas.nativeCanvas.drawText(shortAmount(maxV * i / 4f), padL - 4f * d, y + 4f * d, rightPaint)
         }
         val n = points.size
         val slot = plotW / n
@@ -320,45 +327,49 @@ private fun LineChart(points: List<com.salarybook.app.calc.MonthPoint>) {
                 val v = getter(p)
                 val y = padT + plotH - (v / maxV) * plotH
                 pts.add(Offset(x, y))
-                drawCircle(color, radius = 4f, center = Offset(x, y))
+                drawCircle(color, radius = 2f * d, center = Offset(x, y))
             }
             for (i in 1 until pts.size) {
-                drawLine(color, pts[i - 1], pts[i], strokeWidth = 3f)
+                drawLine(color, pts[i - 1], pts[i], strokeWidth = 2.5f)
             }
         }
         points.forEachIndexed { i, p ->
-            drawContext.canvas.nativeCanvas.drawText(p.period.take(7).substring(2), padL + slot * i + slot / 2f, padT + plotH + 24f, centerPaint)
+            drawContext.canvas.nativeCanvas.drawText(p.period.take(7).substring(2), padL + slot * i + slot / 2f, padT + plotH + 12f * d, centerPaint)
         }
-        drawDiffMarkers(points, padL, slot, padT)
+        drawDiffMarkers(points, padL, slot, padT, d)
         var lx = padL
-        drawRect(incomeColor, Offset(lx, 4f), Size(14f, 14f))
-        drawContext.canvas.nativeCanvas.drawText("收入", lx + 18f, 16f, leftPaint); lx += 82f
-        drawRect(payableColor, Offset(lx, 4f), Size(14f, 14f))
-        drawContext.canvas.nativeCanvas.drawText("应发", lx + 18f, 16f, leftPaint); lx += 82f
-        drawRect(actualColor, Offset(lx, 4f), Size(14f, 14f))
-        drawContext.canvas.nativeCanvas.drawText("实发", lx + 18f, 16f, leftPaint); lx += 82f
-        drawCircle(Color(0xFFE53935), radius = 5f, center = Offset(lx + 7f, 11f))
-        drawContext.canvas.nativeCanvas.drawText("有差额", lx + 20f, 16f, leftPaint)
+        val sw = 6f * d
+        fun legendItem(color: Color, label: String) {
+            drawRect(color, Offset(lx, 3f * d), Size(sw, sw))
+            drawContext.canvas.nativeCanvas.drawText(label, lx + sw + 3f * d, 7f * d + sw, leftPaint)
+            lx += sw + 3f * d + label.length * 7f * d + 6f * d
+        }
+        legendItem(incomeColor, "收入")
+        legendItem(payableColor, "应发")
+        legendItem(actualColor, "实发")
+        drawCircle(Color(0xFFE53935), radius = 2.5f * d, center = Offset(lx + 3f * d, 6f * d))
+        drawContext.canvas.nativeCanvas.drawText("有差额", lx + 7f * d, 7f * d + sw, leftPaint)
     }
 }
 
 @Composable
 private fun PieChart(points: List<com.salarybook.app.calc.MonthPoint>, byType: Map<String, Double>) {
     val colors = listOf(Color(0xFF1976D2), Color(0xFF2E9E44), Color(0xFFFF9800), Color(0xFF9C27B0), Color(0xFFE53935), Color(0xFF00ACC1))
-    Canvas(Modifier.fillMaxSize().padding(8.dp)) {
+    val d = LocalDensity.current.density
+    Canvas(Modifier.fillMaxSize().padding(4.dp)) {
         val items = byType.filterValues { it > 0 }.toList()
         val w = size.width
         val h = size.height
-        val legendW = 300f
-        val leftPaint = axisPaint(android.graphics.Paint.Align.LEFT, 26f)
+        val legendW = 120f * d
+        val leftPaint = axisPaint(android.graphics.Paint.Align.LEFT, 12f * d)
         if (items.isEmpty()) {
             drawContext.canvas.nativeCanvas.drawText("暂无收入数据", w / 2f, h / 2f, leftPaint)
             return@Canvas
         }
         val total = items.sumOf { it.second }
         val cx = (w - legendW) / 2f
-        val cy = h / 2f + 8f
-        val r = minOf((w - legendW) / 2f - 16f, h / 2f - 34f)
+        val cy = h / 2f + 4f * d
+        val r = minOf((w - legendW) / 2f - 10f * d, h / 2f - 16f * d)
         var start = 0.0
         items.forEachIndexed { i, (_, v) ->
             val sweep = 360.0 * v / total
@@ -373,29 +384,30 @@ private fun PieChart(points: List<com.salarybook.app.calc.MonthPoint>, byType: M
             start += sweep
         }
         // 右侧：收入构成图例 + 对账汇总
-        val lx = (w - legendW) + 22f
-        var ly = 22f
-        drawContext.canvas.nativeCanvas.drawText("收入构成", lx, ly, axisPaint(android.graphics.Paint.Align.LEFT, 26f).apply { isFakeBoldText = true })
-        ly += 30f
+        val lx = (w - legendW) + 8f * d
+        var ly = 8f * d
+        val titlePaint = axisPaint(android.graphics.Paint.Align.LEFT, 14f * d).apply { isFakeBoldText = true }
+        drawContext.canvas.nativeCanvas.drawText("收入构成", lx, ly, titlePaint)
+        ly += 12f * d
         items.forEachIndexed { i, (k, v) ->
-            drawRect(colors[i % colors.size], Offset(lx, ly - 13f), Size(15f, 15f))
+            drawRect(colors[i % colors.size], Offset(lx, ly - 5f * d), Size(6f * d, 6f * d))
             drawContext.canvas.nativeCanvas.drawText(
                 "$k ¥" + "%.2f".format(v) + "  " + "%.1f".format(v / total * 100) + "%",
-                lx + 22f, ly, leftPaint)
-            ly += 32f
+                lx + 9f * d, ly, leftPaint)
+            ly += 12f * d
         }
         val totalPayable = points.filter { it.paid }.sumOf { it.payable }
         val totalActual = points.filter { it.paid }.sumOf { it.actual }
         val diffAll = totalActual - totalPayable
-        ly += 10f
+        ly += 5f * d
         drawContext.canvas.nativeCanvas.drawText("应发 ¥" + "%.2f".format(totalPayable), lx, ly, leftPaint)
-        ly += 30f
+        ly += 12f * d
         drawContext.canvas.nativeCanvas.drawText("实发 ¥" + "%.2f".format(totalActual), lx, ly, leftPaint)
-        ly += 30f
+        ly += 12f * d
         if (totalActual > 0) {
             val diffText = if (kotlin.math.abs(diffAll) < 0.005) "✓ 已对平"
             else "差额 ${if (diffAll >= 0) "+" else ""}¥${"%.2f".format(diffAll)}"
-            val p = axisPaint(android.graphics.Paint.Align.LEFT, 30f).apply {
+            val p = axisPaint(android.graphics.Paint.Align.LEFT, 15f * d).apply {
                 color = if (kotlin.math.abs(diffAll) < 0.005) android.graphics.Color.rgb(46, 125, 50) else android.graphics.Color.rgb(198, 40, 40)
                 isFakeBoldText = true
             }
