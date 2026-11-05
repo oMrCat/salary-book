@@ -236,29 +236,28 @@ def import_excel(path, db):
     names = set(wb.sheetnames)
 
     def _read_work_sheet(sheet):
+        # 月度/年度报表的「收入明细」列为：日期/类型/工作内容/时长件数/单价/金额/节假日
         works = []
         for row in sheet.iter_rows(min_row=5):
             if row[0].value is None:
                 continue
             rtype = str(row[1].value or "计时")
-            qty = row[3].value if len(row) > 3 else None
-            units = row[4].value if len(row) > 4 else None
-            rate = row[5].value if len(row) > 5 else None
-            amount = row[6].value if len(row) > 6 else None
-            holiday = row[7].value if len(row) > 7 else None
-            content = row[8].value if len(row) > 8 else None
-            note = row[9].value if len(row) > 9 else None
+            content = row[2].value if len(row) > 2 else None
+            qty = _num(row[3].value if len(row) > 3 else None)
+            rate = row[4].value if len(row) > 4 else None
+            amount = row[5].value if len(row) > 5 else None
+            holiday = row[6].value if len(row) > 6 else None
             works.append({
-                "record_date": str(row[0].value),
+                "record_date": _date_str(row[0].value),
                 "record_type": rtype,
                 "start_time": "",
                 "end_time": "",
-                "hours": 0.0,
-                "units": 0.0,
+                "hours": 0.0 if rtype == "计件" else qty,
+                "units": qty if rtype == "计件" else 0.0,
                 "rate": _num(rate),
                 "amount": _num(amount),
                 "content": str(content or ""),
-                "note": str(note or ""),
+                "note": "",
                 "is_holiday": 1 if (holiday and str(holiday).strip() == "是") else 0,
             })
         return works
@@ -269,7 +268,7 @@ def import_excel(path, db):
             if row[0].value is None:
                 continue
             works.append({
-                "record_date": str(row[0].value),
+                "record_date": _date_str(row[0].value),
                 "record_type": str(row[1].value or "计时"),
                 "start_time": str(row[2].value or ""),
                 "end_time": str(row[3].value or ""),
@@ -289,7 +288,7 @@ def import_excel(path, db):
             if row[0].value is None:
                 continue
             deds.append({
-                "record_date": str(row[col_date - 1].value),
+                "record_date": _date_str(row[col_date - 1].value),
                 "category": str(row[col_cat - 1].value or "其他"),
                 "amount": _num(row[col_amount - 1].value),
                 "note": str(row[col_note - 1].value or ""),
@@ -317,7 +316,8 @@ def import_excel(path, db):
         if "收入明细" in names:
             works = _read_work_sheet(wb["收入明细"])
         if "扣款明细" in names:
-            deductions = _read_ded_sheet(wb["扣款明细"])
+            # 「扣款明细」列为：日期/类别/备注/扣款金额（与「扣款记录」的金额、备注顺序相反）
+            deductions = _read_ded_sheet(wb["扣款明细"], col_amount=4, col_note=3)
     else:
         raise ValueError("无法识别的 Excel 格式（需要本软件导出的表格）")
 
@@ -332,3 +332,10 @@ def _num(value):
         return float(value)
     except (TypeError, ValueError):
         return 0.0
+
+
+def _date_str(value):
+    """Excel 可能把日期存成 datetime，统一成 YYYY-MM-DD 以便去重与按月汇总。"""
+    if hasattr(value, "strftime"):
+        return value.strftime("%Y-%m-%d")
+    return str(value)
