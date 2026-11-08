@@ -47,13 +47,17 @@ def _norm_sig_value(value):
 def _work_sig(rec):
     keys = ("record_date", "record_type", "start_time", "end_time", "hours",
             "units", "rate", "amount", "content", "note", "is_holiday")
+    numeric = ("hours", "units", "rate", "amount")
     parts = []
     for k in keys:
         v = rec.get(k) if isinstance(rec, dict) else rec[k]
         if k == "is_holiday":
             parts.append("1" if v else "0")
+        elif k in numeric:
+            # 缺失/None 的数值字段必须与库内默认值 0 归一到同一签名，否则去重失效
+            parts.append(_norm_sig_value(_to_real(v)))
         else:
-            parts.append(_norm_sig_value(v))
+            parts.append(str(v if v is not None else ""))
     return "|".join(parts)
 
 
