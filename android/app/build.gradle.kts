@@ -22,6 +22,8 @@ android {
             optimization {
                 enable = false
             }
+            // 与既有发行版一致：release 用 debug 签名，方便直接分发安装
+            signingConfig = signingConfigs.getByName("debug")
         }
     }
 
