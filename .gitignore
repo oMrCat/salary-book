@@ -28,3 +28,6 @@ android/captures/
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# Python 虚拟环境（本地）
+.venv/
